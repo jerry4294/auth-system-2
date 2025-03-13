@@ -1,4 +1,4 @@
-// middleware/requireRole.js
+
 const requireRole = (role) => {
     return (req, res, next) => {
         if (req.user.role !== role) {

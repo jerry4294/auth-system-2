@@ -30,7 +30,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Connect to MongoDB
+// MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -38,16 +38,16 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log("✅ MongoDB Atlas Connected..."))
 .catch((err) => console.log("MongoDB Connection Error:", err));
 
-// Import routes
+//routes
 const authRoutes = require("./routes/authRoutes");
-app.use("/api/auth", authRoutes);  // Ensure the route is used correctly
+app.use("/api/auth", authRoutes); 
 
 // Define home route
 app.get("/", (req, res) => {
   res.send("Welcome to the Auth System 2!");
 });
 
-// Start the server
+//server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

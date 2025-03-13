@@ -1,21 +1,18 @@
-// controllers/authController.js
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../models/User"); // Import your user model
+const User = require("../models/User");
 
-// Generate JWT token
 const generateToken = (user) => {
     return jwt.sign(
-        { id: user._id, role: user.role },  // Include user ID and role in the token
-        process.env.JWT_SECRET,  // Use JWT secret from environment
-        { expiresIn: '15m' }  // Token expiration set to 15 minutes
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '15m' }
     );
 };
 
-// Register User
 const register = async (req, res) => {
     const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash the password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
         const newUser = new User({ username, password: hashedPassword });
@@ -26,7 +23,6 @@ const register = async (req, res) => {
     }
 };
 
-// Login User
 const login = async (req, res) => {
     const { username, password } = req.body;
 
@@ -37,14 +33,12 @@ const login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-        // Generate JWT token
         const accessToken = generateToken(user);
 
-        // Store token in HttpOnly cookies
         res.cookie("access_token", accessToken, {
-            httpOnly: true,  // Prevents JS from accessing the cookie
-            secure: process.env.NODE_ENV === "production",  // Only over HTTPS in production
-            sameSite: "Strict",  // Helps with CSRF protection
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict",
         });
 
         res.json({ message: "Login successful" });
@@ -53,9 +47,8 @@ const login = async (req, res) => {
     }
 };
 
-// Logout User
 const logout = (req, res) => {
-    res.clearCookie("access_token");  // Clear the access token cookie
+    res.clearCookie("access_token");
     res.json({ message: "Logged out successfully" });
 };
 
