@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <div class="welcome-message">
+                <h1>Welcome, <span class="username" id="welcomeUsername">User</span></h1>
+                <p>Your personalized dashboard</p>
+            </div>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-content">
+            <section class="profile-card">
+                <h2 class="card-title">Your Profile</h2>
+                <div class="profile-info" id="profileData">
+                    <p><strong>Username:</strong> <span id="currentUsername">Loading...</span></p>
+                    <p><strong>Email:</strong> <span id="currentEmail">Loading...</span></p>
+                    <p><strong>Bio:</strong> <span id="currentBio">No bio yet</span></p>
+                </div>
+            </section>
+
+            <section class="update-card">
+                <h2 class="card-title">Update Profile</h2>
+                <form id="updateForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter new username">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Enter new email">
+                    </div>
+                    <div class="form-group">
+                        <label for="bio">Bio</label>
+                        <textarea id="bio" name="bio" placeholder="Tell us about yourself"></textarea>
+                    </div>
+                    <button type="submit" class="btn">Update Profile</button>
+                    <div id="updateMessage" class="message"></div>
+                </form>
+
+                <div id="changesContainer" class="changes-container" style="display: none;">
+                    <h3 class="changes-title">Changes Made:</h3>
+                    <div id="changesList"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        //cookies
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        //current user data
+        async function fetchUserProfile() {
+            try {
+                const response = await fetch('http://localhost:5001/api/auth/dashboard', {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getCookie('access_token')}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    throw new Error('Failed to fetch profile');
+                }
+                
+                const data = await response.json();
+                updateProfileDisplay(data.user);
+                
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+                showMessage('Error loading profile. Please try again.', 'error');
+            }
+        }
+
+        function updateProfileDisplay(user) {
+            document.getElementById('welcomeUsername').textContent = user.username;
+            document.getElementById('currentUsername').textContent = user.username;
+            document.getElementById('currentEmail').textContent = user.email;
+            document.getElementById('currentBio').textContent = user.bio || 'No bio yet';
+            
+            // Pre-fill form placeholders
+            document.getElementById('username').placeholder = user.username;
+            document.getElementById('email').placeholder = user.email;
+            document.getElementById('bio').placeholder = user.bio || 'Tell us about yourself';
+        }
+
+        function showMessage(message, type) {
+            const messageEl = document.getElementById('updateMessage');
+            messageEl.textContent = message;
+            messageEl.className = `message ${type}`;
+        }
+
+        // Update profile
+        document.getElementById('updateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showMessage('Updating profile...', 'info');
+            
+            const formData = {
+                username: document.getElementById('username').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                bio: document.getElementById('bio').value.trim()
+            };
+
+            try {
+                const response = await fetch('http://localhost:5001/api/auth/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getCookie('access_token')}`
+                    },
+                    body: JSON.stringify(formData),
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Profile updated successfully!', 'success');
+                    displayChanges(result.changes);
+                    updateProfileDisplay(result.user);
+                    document.getElementById('updateForm').reset();
+                } else {
+                    throw new Error(result.message || 'Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                showMessage(error.message, 'error');
+            }
+        });
+
+        function displayChanges(changes) {
+            const changesContainer = document.getElementById('changesContainer');
+            const changesList = document.getElementById('changesList');
+            changesList.innerHTML = '';
+            
+            if (changes) {
+                for (const [field, values] of Object.entries(changes)) {
+                    if (values.old !== values.new) {
+                        const changeItem = document.createElement('div');
+                        changeItem.className = 'change-item';
+                        changeItem.innerHTML = `
+                            <strong>${field}:</strong><br>
+                            <span style="text-decoration: line-through; color: var(--danger)">${values.old || 'Empty'}</span><br>
+                            <span style="color: var(--success)">→ ${values.new || 'Empty'}</span>
+                        `;
+                        changesList.appendChild(changeItem);
+                    }
+                }
+            }
+            
+            changesContainer.style.display = changesList.innerHTML ? 'block' : 'none';
+        }
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:5001/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/login.html';
+                } else {
+                    throw new Error('Logout failed');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                showMessage('Logout failed: ' + error.message, 'error');
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', fetchUserProfile);
+    </script>
+</body>
+</html>

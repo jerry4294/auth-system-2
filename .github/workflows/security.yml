@@ -1,0 +1,12 @@
+name: Security Check
+on: [push, pull_request]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Audit dependencies
+        run: npm audit
+      - name: Check for outdated packages
+        run: npm outdated
